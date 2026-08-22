@@ -63,7 +63,7 @@ interface Config {
   prices: Record<string, PeakPriceEntry | PriceEntry>;
 }
 
-/** DeepSeek 官方人民币价格（¥/1M tokens） */
+/** DeepSeek 官方人民币价格（¥/1M tokens），来源：官方定价页 api-docs.deepseek.com/quick_start/pricing */
 const DEFAULT_PRICES: Record<string, PeakPriceEntry | PriceEntry> = {
   "deepseek-v4-flash": {
     peak: { input: 3, output: 9, cacheRead: 0.1, cacheWrite: 0 },
@@ -73,8 +73,10 @@ const DEFAULT_PRICES: Record<string, PeakPriceEntry | PriceEntry> = {
     peak: { input: 9, output: 27, cacheRead: 0.3, cacheWrite: 0 },
     offpeak: { input: 4.5, output: 13.5, cacheRead: 0.15, cacheWrite: 0 },
   },
-  "deepseek-chat": { input: 2, output: 8, cacheRead: 0.5, cacheWrite: 0 },
-  "deepseek-reasoner": { input: 4, output: 16, cacheRead: 1, cacheWrite: 0 },
+  "deepseek-v4-flash-vision-exp": {
+    peak: { input: 3, output: 9, cacheRead: 0.1, cacheWrite: 0 },
+    offpeak: { input: 1.5, output: 4.5, cacheRead: 0.05, cacheWrite: 0 },
+  },
 };
 
 const DEFAULT_CONFIG: Config = {
