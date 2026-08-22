@@ -17,7 +17,8 @@
   "files": [
     "index.ts",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "deepseek-cost.config.example.json"
   ],
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
@@ -27,5 +28,13 @@
     "extensions": [
       "./index.ts"
     ]
+  },
+  "author": "qwertyu7894",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qwertyu7894/deepseek-cost.git"
+  },
+  "bugs": {
+    "url": "https://github.com/qwertyu7894/deepseek-cost/issues"
   }
 }
