@@ -1,0 +1,6 @@
+# 真实配置文件（含本地设置）绝不提交
+deepseek-cost.config.json
+
+# Node
+node_modules/
+*.log

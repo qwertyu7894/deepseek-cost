@@ -1,0 +1,8 @@
+{
+  "providerId": "deepseek",
+  "balanceRefreshMs": 60000,
+  "peakWindows": [[9, 12], [14, 18]],
+  "lowBalanceThreshold": 10,
+  "lowBalanceNotify": true,
+  "prices": {}
+}
