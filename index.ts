@@ -57,6 +57,7 @@ interface PeakPriceEntry {
 interface Config {
   providerId: string;
   balanceRefreshMs: number;
+  peakDays: number[]; // 高峰生效的星期（JS getDay()：0=周日），默认周一至周五
   peakWindows: Array<[number, number]>;
   lowBalanceThreshold: number;
   lowBalanceNotify: boolean;
@@ -82,6 +83,7 @@ const DEFAULT_PRICES: Record<string, PeakPriceEntry | PriceEntry> = {
 const DEFAULT_CONFIG: Config = {
   providerId: "deepseek",
   balanceRefreshMs: 60_000,
+  peakDays: [1, 2, 3, 4, 5], // 周一至周五
   peakWindows: [
     [9, 12],
     [14, 18],
@@ -119,9 +121,13 @@ const STATUS_KEY = "z-deepseek-cost";
 
 /* ============================== 时段 ============================== */
 
-/** 判断某时刻是否为高峰时段（北京时间，含头不含尾） */
+/**
+ * 判断某时刻是否为高峰时段（北京时间）。
+ * 官方规则：高峰 = 周一至周五 9:00–12:00、14:00–18:00；周六周日全天空闲。
+ */
 function isPeakTime(date: Date): boolean {
   const bj = new Date(date.getTime() + 8 * 3600_000); // UTC+8
+  if (!config.peakDays.includes(bj.getUTCDay())) return false; // 周末全天空闲
   const minutes = bj.getUTCHours() * 60 + bj.getUTCMinutes();
   return config.peakWindows.some(
     ([start, end]) => minutes >= start * 60 && minutes < end * 60,

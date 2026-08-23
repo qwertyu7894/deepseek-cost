@@ -30,7 +30,7 @@ MCP: 0/11 servers ... 💳🔴¥6.67 🌙 本轮¥0.0014·缓存99% 累计¥0.03
 | v4-flash-vision-exp | 高峰 | ¥0.10 | ¥3.0 | ¥9.0 |
 | v4-flash-vision-exp | 空闲 | ¥0.05 | ¥1.5 | ¥4.5 |
 
-高峰时段：北京时间 **9:00–12:00、14:00–18:00**（其余为空闲时段）。
+高峰时段：北京时间 **周一至周五 9:00–12:00、14:00–18:00**；**周六、周日全天空闲**。
 
 > 当前官方在售模型仅 v4 系列（含视觉实验模型）；deepseek-chat / deepseek-reasoner 已下架，不再列入价格表。
 
@@ -59,6 +59,7 @@ pi install ./path/to/deepseek-cost
   "providerId": "deepseek",
   "balanceRefreshMs": 60000,
   "peakWindows": [[9, 12], [14, 18]],
+  "peakDays": [1, 2, 3, 4, 5],
   "lowBalanceThreshold": 10,
   "lowBalanceNotify": true,
   "prices": {}
@@ -70,6 +71,7 @@ pi install ./path/to/deepseek-cost
 | `providerId` | `"deepseek"` | 余额查询所用 provider id（取它的 API key） |
 | `balanceRefreshMs` | `60000` | 余额自动刷新间隔（毫秒）；设 `0` 关闭自动刷新 |
 | `peakWindows` | `[[9,12],[14,18]]` | 高峰时段（北京小时，含头不含尾） |
+| `peakDays` | `[1,2,3,4,5]` | 高峰生效的星期（0=周日）；周末（周六/周日）全天空闲 |
 | `lowBalanceThreshold` | `10` | 低余额阈值（¥），余额低于此值触发提醒 |
 | `lowBalanceNotify` | `true` | 是否弹出通知（状态栏 🔴 标记始终显示） |
 | `prices` | 内置官方价表 | 覆盖/新增模型价格：`{peak, offpeak}` 两档或固定 `{input, output, cacheRead}`（¥/1M） |
