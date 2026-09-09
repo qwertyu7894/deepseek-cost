@@ -64,19 +64,24 @@ interface Config {
   prices: Record<string, PeakPriceEntry | PriceEntry>;
 }
 
-/** DeepSeek 官方人民币价格（¥/1M tokens），来源：官方定价页 api-docs.deepseek.com/quick_start/pricing */
+/**
+ * DeepSeek 官方人民币价格（¥/1M tokens）。
+ * 来源：官方定价页 api-docs.deepseek.com/quick_start/pricing + 官方调价公告。
+ * v4-flash / v4-flash-vision-exp 为 2026-09-10 12:00 起生效的新价（高峰 = 空闲 × 2）；
+ * v4-pro 价格未调整。如需按旧价结算过渡期，可在配置文件中用 prices 覆盖。
+ */
 const DEFAULT_PRICES: Record<string, PeakPriceEntry | PriceEntry> = {
   "deepseek-v4-flash": {
-    peak: { input: 3, output: 9, cacheRead: 0.1, cacheWrite: 0 },
-    offpeak: { input: 1.5, output: 4.5, cacheRead: 0.05, cacheWrite: 0 },
+    peak: { input: 2, output: 8, cacheRead: 0.04, cacheWrite: 0 },
+    offpeak: { input: 1, output: 4, cacheRead: 0.02, cacheWrite: 0 },
+  },
+  "deepseek-v4-flash-vision-exp": {
+    peak: { input: 2, output: 8, cacheRead: 0.04, cacheWrite: 0 },
+    offpeak: { input: 1, output: 4, cacheRead: 0.02, cacheWrite: 0 },
   },
   "deepseek-v4-pro": {
     peak: { input: 9, output: 27, cacheRead: 0.3, cacheWrite: 0 },
     offpeak: { input: 4.5, output: 13.5, cacheRead: 0.15, cacheWrite: 0 },
-  },
-  "deepseek-v4-flash-vision-exp": {
-    peak: { input: 3, output: 9, cacheRead: 0.1, cacheWrite: 0 },
-    offpeak: { input: 1.5, output: 4.5, cacheRead: 0.05, cacheWrite: 0 },
   },
 };
 
