@@ -59,6 +59,7 @@ interface Config {
   balanceRefreshMs: number;
   peakDays: number[]; // 高峰生效的星期（JS getDay()：0=周日），默认周一至周五
   peakWindows: Array<[number, number]>;
+  holidays: string[]; // 法定节假日（YYYY-MM-DD，全天空闲）
   lowBalanceThreshold: number;
   lowBalanceNotify: boolean;
   prices: Record<string, PeakPriceEntry | PriceEntry>;
@@ -66,24 +67,47 @@ interface Config {
 
 /**
  * DeepSeek 官方人民币价格（¥/1M tokens）。
- * 来源：官方定价页 api-docs.deepseek.com/quick_start/pricing + 官方调价公告。
- * v4-flash / v4-flash-vision-exp 为 2026-09-10 12:00 起生效的新价（高峰 = 空闲 × 2）；
- * v4-pro 价格未调整。如需按旧价结算过渡期，可在配置文件中用 prices 覆盖。
+ * 来源：官方定价页 api-docs.deepseek.com/quick_start/pricing（最新）。
+ * 在售模型：deepseek-flash（V4.1-Flash-1017，含图像理解）、deepseek-v4-pro。
+ * 旧名 deepseek-v4-flash / deepseek-v4-flash-vision-exp 仍可调用，由新 Flash 模型服务并按 Flash 价格计费，故保留为别名。
  */
+const FLASH_PRICE: PeakPriceEntry = {
+  peak: { input: 2, output: 8, cacheRead: 0.04, cacheWrite: 0 },
+  offpeak: { input: 1, output: 4, cacheRead: 0.02, cacheWrite: 0 },
+};
+
 const DEFAULT_PRICES: Record<string, PeakPriceEntry | PriceEntry> = {
-  "deepseek-v4-flash": {
-    peak: { input: 2, output: 8, cacheRead: 0.04, cacheWrite: 0 },
-    offpeak: { input: 1, output: 4, cacheRead: 0.02, cacheWrite: 0 },
-  },
-  "deepseek-v4-flash-vision-exp": {
-    peak: { input: 2, output: 8, cacheRead: 0.04, cacheWrite: 0 },
-    offpeak: { input: 1, output: 4, cacheRead: 0.02, cacheWrite: 0 },
-  },
+  "deepseek-flash": FLASH_PRICE,
+  "deepseek-v4-flash": FLASH_PRICE, // 旧名兼容
+  "deepseek-v4-flash-vision-exp": FLASH_PRICE, // 旧名兼容（已下线，由新 Flash 服务）
   "deepseek-v4-pro": {
     peak: { input: 9, output: 27, cacheRead: 0.3, cacheWrite: 0 },
     offpeak: { input: 4.5, output: 13.5, cacheRead: 0.15, cacheWrite: 0 },
   },
 };
+
+/**
+ * 2026 年中国法定节假日（国务院办公厅国办发明电〔2025〕7号）。
+ * 按官方规则：法定节假日全天均为空闲时段。
+ */
+const DEFAULT_HOLIDAYS: string[] = [
+  // 元旦 1/1-1/3
+  "2026-01-01", "2026-01-02", "2026-01-03",
+  // 春节 2/15-2/23
+  "2026-02-15", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19",
+  "2026-02-20", "2026-02-21", "2026-02-22", "2026-02-23",
+  // 清明 4/4-4/6
+  "2026-04-04", "2026-04-05", "2026-04-06",
+  // 劳动节 5/1-5/5
+  "2026-05-01", "2026-05-02", "2026-05-03", "2026-05-04", "2026-05-05",
+  // 端午 6/19-6/21
+  "2026-06-19", "2026-06-20", "2026-06-21",
+  // 中秋 9/25-9/27
+  "2026-09-25", "2026-09-26", "2026-09-27",
+  // 国庆 10/1-10/7
+  "2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04", "2026-10-05",
+  "2026-10-06", "2026-10-07",
+];
 
 const DEFAULT_CONFIG: Config = {
   providerId: "deepseek",
@@ -93,6 +117,7 @@ const DEFAULT_CONFIG: Config = {
     [9, 12],
     [14, 18],
   ],
+  holidays: DEFAULT_HOLIDAYS,
   lowBalanceThreshold: 10,
   lowBalanceNotify: true,
   prices: DEFAULT_PRICES,
@@ -109,6 +134,7 @@ function loadConfig(): Config {
       return {
         ...DEFAULT_CONFIG,
         ...raw,
+        holidays: [...new Set([...DEFAULT_HOLIDAYS, ...(raw.holidays ?? [])])],
         prices: { ...DEFAULT_PRICES, ...(raw.prices ?? {}) },
       };
     }
@@ -128,11 +154,14 @@ const STATUS_KEY = "z-deepseek-cost";
 
 /**
  * 判断某时刻是否为高峰时段（北京时间）。
- * 官方规则：高峰 = 周一至周五 9:00–12:00、14:00–18:00；周六周日全天空闲。
+ * 官方规则：高峰 = 周一至周五（不含中国法定节假日）9:00–12:00、14:00–18:00；
+ * 其余时段（含周末、法定节假日全天）均为空闲时段。
  */
 function isPeakTime(date: Date): boolean {
   const bj = new Date(date.getTime() + 8 * 3600_000); // UTC+8
   if (!config.peakDays.includes(bj.getUTCDay())) return false; // 周末全天空闲
+  const dateKey = `${bj.getUTCFullYear()}-${String(bj.getUTCMonth() + 1).padStart(2, "0")}-${String(bj.getUTCDate()).padStart(2, "0")}`;
+  if (config.holidays.includes(dateKey)) return false; // 法定节假日全天空闲
   const minutes = bj.getUTCHours() * 60 + bj.getUTCMinutes();
   return config.peakWindows.some(
     ([start, end]) => minutes >= start * 60 && minutes < end * 60,

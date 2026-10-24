@@ -1,6 +1,6 @@
 {
   "name": "deepseek-cost",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "DeepSeek 余额与费用实时监控插件：官方余额查询、高峰/空闲时段计价、每轮缓存命中与消费统计、低余额提醒（pi 与 pi-web 通用）",
   "keywords": [
     "pi-package",

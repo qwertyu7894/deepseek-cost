@@ -21,19 +21,22 @@ MCP: 0/11 servers ... 💳🔴¥6.67 🌙 本轮¥0.0014·缓存99% 累计¥0.03
 
 ## 计费规则（DeepSeek 官方价格，¥/1M tokens）
 
-> **2026-09-10 12:00 起**：flash 系列调整定价（见下表）；v4-pro 未调整。
+> 来源：官方定价页（api-docs.deepseek.com/quick_start/pricing）。
+> 官方在售模型：**deepseek-flash**（V4.1-Flash-1017，支持图像理解）、**deepseek-v4-pro**。
+> 旧名 `deepseek-v4-flash` / `deepseek-v4-flash-vision-exp` 仍可调用，由新 Flash 模型服务并按 Flash 价格计费（插件已作为别名兼容）。
 
 | 模型 | 时段 | 缓存命中 | 输入(未命中) | 输出 |
 |------|------|---------|------------|------|
-| v4-flash / v4-flash-vision-exp | 高峰 | ¥0.04 | ¥2.0 | ¥8.0 |
-| v4-flash / v4-flash-vision-exp | 空闲 | ¥0.02 | ¥1.0 | ¥4.0 |
-| v4-pro | 高峰 | ¥0.30 | ¥9.0 | ¥27.0 |
-| v4-pro | 空闲 | ¥0.15 | ¥4.5 | ¥13.5 |
+| deepseek-flash | 高峰 | ¥0.04 | ¥2.0 | ¥8.0 |
+| deepseek-flash | 空闲 | ¥0.02 | ¥1.0 | ¥4.0 |
+| deepseek-v4-pro | 高峰 | ¥0.30 | ¥9.0 | ¥27.0 |
+| deepseek-v4-pro | 空闲 | ¥0.15 | ¥4.5 | ¥13.5 |
 
-高峰时段：北京时间 **周一至周五 9:00–12:00、14:00–18:00**；**周六、周日全天空闲**。
-高峰价格 = 空闲价格的 2 倍。
+**高峰时段**：北京时间**周一至周五**（不含中国法定节假日）**9:00–12:00、14:00–18:00**。
+**空闲时段**：其余所有时间，**包括周末与法定节假日全天**（高峰价 = 空闲价 × 2）。
 
-> 当前官方在售模型仅 v4 系列（含视觉实验模型）；deepseek-chat / deepseek-reasoner 已下架。
+> 插件已内置 **2026 年中国法定节假日**（国务院办公厅国办发明电〔2025〕7号）自动判定空闲时段；
+> 其他年份可在配置文件的 `holidays` 中补充（`YYYY-MM-DD` 格式，与内置表取并集）。
 
 ## 安装
 
@@ -72,7 +75,8 @@ pi install ./path/to/deepseek-cost
 | `providerId` | `"deepseek"` | 余额查询所用 provider id（取它的 API key） |
 | `balanceRefreshMs` | `60000` | 余额自动刷新间隔（毫秒）；设 `0` 关闭自动刷新 |
 | `peakWindows` | `[[9,12],[14,18]]` | 高峰时段（北京小时，含头不含尾） |
-| `peakDays` | `[1,2,3,4,5]` | 高峰生效的星期（0=周日）；周末（周六/周日）全天空闲 |
+| `peakDays` | `[1,2,3,4,5]` | 高峰生效的星期（0=周日）；周末全天空闲 |
+| `holidays` | 内置 2026 年法定节假日 | 法定节假日日期（`YYYY-MM-DD`），全天按空闲价；与内置表取并集 |
 | `lowBalanceThreshold` | `10` | 低余额阈值（¥），余额低于此值触发提醒 |
 | `lowBalanceNotify` | `true` | 是否弹出通知（状态栏 🔴 标记始终显示） |
 | `prices` | 内置官方价表 | 覆盖/新增模型价格：`{peak, offpeak}` 两档或固定 `{input, output, cacheRead}`（¥/1M） |
