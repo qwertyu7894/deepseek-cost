@@ -4,6 +4,7 @@
   "peakDays": [1, 2, 3, 4, 5],
   "peakWindows": [[9, 12], [14, 18]],
   "holidays": [],
+  "accountLabel": "",
   "lowBalanceThreshold": 10,
   "lowBalanceNotify": true,
   "prices": {}

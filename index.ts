@@ -60,6 +60,7 @@ interface Config {
   peakDays: number[]; // 高峰生效的星期（JS getDay()：0=周日），默认周一至周五
   peakWindows: Array<[number, number]>;
   holidays: string[]; // 法定节假日（YYYY-MM-DD，全天空闲）
+  accountLabel: string; // 账户显示名（自定义）；留空则自动用「官方/代理·…key末4位」
   lowBalanceThreshold: number;
   lowBalanceNotify: boolean;
   prices: Record<string, PeakPriceEntry | PriceEntry>;
@@ -118,6 +119,7 @@ const DEFAULT_CONFIG: Config = {
     [14, 18],
   ],
   holidays: DEFAULT_HOLIDAYS,
+  accountLabel: "",
   lowBalanceThreshold: 10,
   lowBalanceNotify: true,
   prices: DEFAULT_PRICES,
@@ -198,6 +200,8 @@ interface BalanceState {
   toppedUp: string;
   fetchedAt: number;
   error?: string;
+  account: string; // 账户标识（自定义名 / 官方/代理 + key 末4位）
+  providerHost: string;
 }
 
 function emptyBalance(): BalanceState {
@@ -207,6 +211,8 @@ function emptyBalance(): BalanceState {
     granted: "—",
     toppedUp: "—",
     fetchedAt: 0,
+    account: "",
+    providerHost: "",
   };
 }
 
@@ -292,19 +298,45 @@ export default function (pi: ExtensionAPI) {
   /** 拉取 DeepSeek 官方余额，并触发低余额提醒 */
   async function refreshBalance(ctx: ExtensionContext): Promise<void> {
     try {
-      // 安全校验：只允许 baseUrl 指向 DeepSeek 官方的 provider 发起余额请求，
-      // 防止 providerId 误配时把其他 provider 的 API key 发送到非 DeepSeek 地址
       const provider = ctx.modelRegistry.getProvider(config.providerId);
       const providerBaseUrl = provider?.baseUrl ?? "";
+      const auth = await ctx.modelRegistry.getProviderAuth(config.providerId);
+      const key = auth?.auth?.apiKey;
+
+      // 账户标识：自定义名优先；否则「官方/代理域名·…key末4位」
+      // 仅使用 key 末 4 位，绝不暴露完整密钥
+      const host = (() => {
+        try {
+          return new URL(providerBaseUrl).host;
+        } catch {
+          return providerBaseUrl;
+        }
+      })();
+      const keyTail = key && key.length >= 8 ? key.slice(-4) : "";
+      const autoLabel = /(^|\.)deepseek\.com$/i.test(host)
+        ? `官方${keyTail ? `·…${keyTail}` : ""}`
+        : `${host || config.providerId}${keyTail ? `·…${keyTail}` : ""}`;
+      const account = config.accountLabel.trim() || autoLabel;
+
+      // 安全校验：只允许 baseUrl 指向 DeepSeek 官方的 provider 发起余额请求，
+      // 防止 providerId 误配时把其他 provider 的 API key 发送到非 DeepSeek 地址
       if (!/deepseek\.com/i.test(providerBaseUrl)) {
-        balance = { ...emptyBalance(), error: `provider ${config.providerId} 非 DeepSeek` };
+        balance = {
+          ...emptyBalance(),
+          error: `provider ${config.providerId} 非 DeepSeek`,
+          account,
+          providerHost: host,
+        };
         updateUI(ctx);
         return;
       }
-      const auth = await ctx.modelRegistry.getProviderAuth(config.providerId);
-      const key = auth?.auth?.apiKey;
       if (!key) {
-        balance = { ...emptyBalance(), error: `no-key(${config.providerId})` };
+        balance = {
+          ...emptyBalance(),
+          error: `no-key(${config.providerId})`,
+          account,
+          providerHost: host,
+        };
         updateUI(ctx);
         return;
       }
@@ -334,6 +366,8 @@ export default function (pi: ExtensionAPI) {
           granted: info?.granted_balance ?? "—",
           toppedUp: info?.topped_up_balance ?? "—",
           fetchedAt: Date.now(),
+          account,
+          providerHost: host,
         };
       } finally {
         clearTimeout(timeout);
@@ -384,16 +418,19 @@ export default function (pi: ExtensionAPI) {
     // 余额文本（低余额时红色标记）
     let balanceText = "❓";
     if (balance.error) {
-      balanceText = "⚠️";
+      // 有账户标识时仍展示账户名，便于多账号区分
+      balanceText = balance.account ? `⚠️${balance.account}` : "⚠️";
     } else if (balance.fetchedAt > 0) {
       const low = isLowBalance();
       balanceText = low ? `🔴¥${balance.total}` : `¥${balance.total}`;
     }
 
-    // 状态栏一行（底部最右端）：余额 + 当前时段（高峰期/非高峰期）+ 本轮 + 累计
+    // 状态栏一行（底部最右端）：账户名 + 余额 + 当前时段 + 本轮 + 累计
     const peakText = peak ? "⛰️高峰期" : "🌙非高峰期";
+    // 成功时 account 已包含在 balanceText 之外单独展示；失败时已内联到 balanceText
+    const accountText = balance.account && !balance.error ? `${balance.account} ` : "";
     const line =
-      `💳${balanceText} ${peakText} 本轮${turnMoney}·缓存${cachePct}% 累计${money}`;
+      `💳 ${accountText}${balanceText} ${peakText} 本轮${turnMoney}·缓存${cachePct}% 累计${money}`;
     ctx.ui.setStatus(STATUS_KEY, line);
   }
 
@@ -510,6 +547,7 @@ export default function (pi: ExtensionAPI) {
       let msg = `${peakLabel(peak)} ${peak ? "高峰" : "空闲"}时段`;
       if (balance.fetchedAt > 0 && !balance.error) {
         const low = isLowBalance();
+        msg += `\n👤 账户：${balance.account || "—"}${balance.providerHost ? `（${balance.providerHost}）` : ""}`;
         msg += `\n💳 余额：${low ? "🔴 " : ""}¥${balance.total}` +
           (balance.toppedUp !== "—" || balance.granted !== "—"
             ? `（充值 ¥${balance.toppedUp} + 赠送 ¥${balance.granted}）`
